@@ -23,7 +23,7 @@ import (
 	"github.com/containerd/console"
 	isatty "github.com/mattn/go-isatty"
 	"github.com/muesli/cancelreader"
-	te "github.com/muesli/termenv"
+	"github.com/muesli/termenv"
 	"golang.org/x/term"
 )
 
@@ -89,8 +89,8 @@ type Program struct {
 	errs         chan error
 	readLoopDone chan struct{}
 
-	output       io.Writer // where to send output. this will usually be os.Stdout.
-	input        io.Reader // this will usually be os.Stdin.
+	output       *termenv.Output // where to send output. this will usually be os.Stdout.
+	input        io.Reader       // this will usually be os.Stdin.
 	cancelReader cancelreader.CancelReader
 
 	renderer           renderer
@@ -253,7 +253,6 @@ func NewProgram(model Model, opts ...ProgramOption) *Program {
 	p := &Program{
 		mtx:          &sync.Mutex{},
 		initialModel: model,
-		output:       os.Stdout,
 		input:        os.Stdin,
 		msgs:         make(chan Msg),
 		CatchPanics:  true,
@@ -263,6 +262,14 @@ func NewProgram(model Model, opts ...ProgramOption) *Program {
 	// Apply all options to the program.
 	for _, opt := range opts {
 		opt(p)
+	}
+
+	// if no output was set, set it to stdout
+	if p.output == nil {
+		p.output = termenv.DefaultOutput()
+
+		// cache detected color values
+		termenv.WithCache(true)(p.output)
 	}
 
 	return p
@@ -429,7 +436,7 @@ func (p *Program) StartReturningModel() (Model, error) {
 	}
 	defer p.cancelReader.Close() // nolint:errcheck
 
-	if f, ok := p.output.(*os.File); ok && isatty.IsTerminal(f.Fd()) {
+	if f, ok := p.output.TTY().(*os.File); ok && isatty.IsTerminal(f.Fd()) {
 		// Get the initial terminal size and send it to the program.
 		go func() {
 			w, h, err := term.GetSize(int(f.Fd()))
@@ -527,7 +534,7 @@ func (p *Program) StartReturningModel() (Model, error) {
 				p.DisableMouseAllMotion()
 
 			case hideCursorMsg:
-				hideCursor(p.output)
+				p.output.HideCursor()
 
 			case execMsg:
 				// NB: this blocks.
@@ -620,7 +627,7 @@ func (p *Program) EnterAltScreen() {
 		return
 	}
 
-	enterAltScreen(p.output)
+	p.output.AltScreen()
 
 	p.altScreenActive = true
 	if p.renderer != nil {
@@ -639,7 +646,7 @@ func (p *Program) ExitAltScreen() {
 		return
 	}
 
-	exitAltScreen(p.output)
+	p.output.ExitAltScreen()
 
 	p.altScreenActive = false
 	if p.renderer != nil {
@@ -654,7 +661,8 @@ func (p *Program) ExitAltScreen() {
 func (p *Program) EnableMouseCellMotion() {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
-	fmt.Fprintf(p.output, te.CSI+te.EnableMouseCellMotionSeq)
+
+	p.output.EnableMouseCellMotion()
 }
 
 // DisableMouseCellMotion disables Mouse Cell Motion tracking. This will be
@@ -664,7 +672,8 @@ func (p *Program) EnableMouseCellMotion() {
 func (p *Program) DisableMouseCellMotion() {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
-	fmt.Fprintf(p.output, te.CSI+te.DisableMouseCellMotionSeq)
+
+	p.output.DisableMouseCellMotion()
 }
 
 // EnableMouseAllMotion enables mouse click, release, wheel and motion events,
@@ -675,7 +684,8 @@ func (p *Program) DisableMouseCellMotion() {
 func (p *Program) EnableMouseAllMotion() {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
-	fmt.Fprintf(p.output, te.CSI+te.EnableMouseAllMotionSeq)
+
+	p.output.EnableMouseAllMotion()
 }
 
 // DisableMouseAllMotion disables All Motion mouse tracking. This will be
@@ -685,7 +695,8 @@ func (p *Program) EnableMouseAllMotion() {
 func (p *Program) DisableMouseAllMotion() {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
-	fmt.Fprintf(p.output, te.CSI+te.DisableMouseAllMotionSeq)
+
+	p.output.DisableMouseAllMotion()
 }
 
 // ReleaseTerminal restores the original terminal state and cancels the input
