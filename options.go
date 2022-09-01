@@ -18,7 +18,7 @@ type ProgramOption func(*Program)
 // won't need to use this.
 func WithOutput(output io.Writer) ProgramOption {
 	return func(p *Program) {
-		p.output = termenv.NewOutput(output, termenv.WithCache(true))
+		p.output = termenv.NewOutput(output, termenv.WithColorCache(true))
 	}
 }
 

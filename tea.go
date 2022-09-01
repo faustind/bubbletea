@@ -269,7 +269,7 @@ func NewProgram(model Model, opts ...ProgramOption) *Program {
 		p.output = termenv.DefaultOutput()
 
 		// cache detected color values
-		termenv.WithCache(true)(p.output)
+		termenv.WithColorCache(true)(p.output)
 	}
 
 	return p

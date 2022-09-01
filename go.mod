@@ -9,8 +9,8 @@ require (
 	github.com/muesli/ansi v0.0.0-20211018074035-2e021307bc4b
 	github.com/muesli/cancelreader v0.2.2
 	github.com/muesli/reflow v0.3.0
-	github.com/muesli/termenv v0.12.1-0.20220615005108-4e9068de9898
-	golang.org/x/sys v0.0.0-20220209214540-3681064d5158
+	github.com/muesli/termenv v0.12.1-0.20220901123159-d729275e0977
+	golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 	golang.org/x/text v0.3.7 // indirect
 )
